@@ -51,6 +51,14 @@ import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
 
+    private lateinit var authViewModel: AuthViewModel
+
+    private val googleSignInLauncher = registerForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        authViewModel.handleSignInResult(result.data)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -64,6 +72,7 @@ class MainActivity : ComponentActivity() {
             val authViewModel: AuthViewModel = viewModel(
                 factory = AuthViewModelFactory(graph.authRepository)
             )
+            this@MainActivity.authViewModel = authViewModel
             val authState by authViewModel.authState.collectAsState()
 
             // Theme follows the persisted profile; falls back to Electric.
@@ -80,7 +89,7 @@ class MainActivity : ComponentActivity() {
                     is AuthState.SigningIn -> LoginScreen(
                         authState = s,
                         errors = authViewModel.errors,
-                        onGoogleSignIn = { authViewModel.signIn(this@MainActivity) },
+                        onGoogleSignIn = { authViewModel.signIn(googleSignInLauncher) },
                         onContinueOffline = { authViewModel.continueOffline() }
                     )
                     is AuthState.SignedIn,
@@ -211,7 +220,7 @@ fun Fit2xApp(
                     reminderViewModel = reminderViewModel,
                     currentTheme = currentTheme,
                     onThemeSelected = onThemeSelected,
-                    onSignIn = { authViewModel.signIn(activity) }
+                    onSignIn = { authViewModel.signIn(googleSignInLauncher) }
                 )
             }
             composable(Screen.WorkoutDetail.route) {

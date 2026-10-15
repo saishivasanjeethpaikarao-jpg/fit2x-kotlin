@@ -46,12 +46,24 @@ class AuthViewModel(private val repository: AuthRepository) : ViewModel() {
         }
     }
 
-    /** Starts native Google Sign-In. No-op while a sign-in is already running. */
-    fun signIn(activity: Activity) {
+    /** Starts native Google Sign-In via the launcher. No-op while a sign-in is already running. */
+    fun signIn(launcher: androidx.activity.result.ActivityResultLauncher<android.content.Intent>) {
         if (_authState.value is AuthState.SigningIn) return
+        val intent = repository.getSignInIntent()
+        if (intent == null) {
+            viewModelScope.launch {
+                _errors.emit("Google sign-in isn't configured yet (google-services.json is missing).")
+            }
+            return
+        }
         _authState.value = AuthState.SigningIn
+        launcher.launch(intent)
+    }
+
+    /** Call from the ActivityResult callback with the returned Intent. */
+    fun handleSignInResult(data: android.content.Intent?) {
         viewModelScope.launch {
-            repository.signInWithGoogle(activity).collect { result ->
+            repository.handleSignInResult(data).collect { result ->
                 when (result) {
                     is AuthResult.Success ->
                         _authState.value = AuthState.SignedIn(result.user)

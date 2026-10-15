@@ -93,5 +93,6 @@ dependencies {
 
     // Native Google Sign-In via Credential Manager
     implementation(libs.credentials)
-    implementation("androidx.credentials:credentials-play-services-auth:1.5.0")
+    // Classic Google Sign-In (stable API)
+    implementation("com.google.android.gms:play-services-auth:21.0.0")
 }
