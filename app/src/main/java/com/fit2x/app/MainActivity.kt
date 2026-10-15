@@ -44,6 +44,7 @@ import com.fit2x.app.ui.screens.WorkoutDetailScreen
 import com.fit2x.app.ui.theme.Fit2xTheme
 import com.fit2x.app.workout.WorkoutGraph
 import com.fit2x.app.workout.WorkoutViewModel
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
 
 class MainActivity : ComponentActivity() {
@@ -104,7 +105,7 @@ class MainActivity : ComponentActivity() {
         activityScope.launch {
             try {
                 val dao = graph.database.userProfileDao()
-                val row = kotlinx.coroutines.flow.firstOrNull(dao.observeProfile())
+                val row = dao.observeProfile().firstOrNull()
                 if (row != null) {
                     dao.upsert(row.copy(themeId = themeId))
                 } else {

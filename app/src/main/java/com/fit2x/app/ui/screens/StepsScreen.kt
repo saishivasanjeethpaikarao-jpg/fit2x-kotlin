@@ -310,7 +310,7 @@ private fun updateStepGoal(context: android.content.Context, goal: Int) {
     val dao = context.appGraph().database.userProfileDao()
     CoroutineScope(Dispatchers.IO).launch {
         try {
-            val row = firstOrNull(dao.observeProfile())
+            val row = dao.observeProfile().firstOrNull()
             if (row != null) dao.upsert(row.copy(stepGoal = clamped))
             else dao.upsert(com.fit2x.app.data.local.UserProfile(stepGoal = clamped))
         } catch (_: Exception) {
