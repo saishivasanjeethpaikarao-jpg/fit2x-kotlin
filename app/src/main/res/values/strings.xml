@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">FIT2X</string>
+
+    <!-- Bottom nav labels -->
+    <string name="nav_today">Today</string>
+    <string name="nav_steps">Steps</string>
+    <string name="nav_week">Week</string>
+    <string name="nav_diet">Diet</string>
+    <string name="nav_stats">Stats</string>
+    <string name="nav_settings">Settings</string>
+
+    <!-- Workout detail -->
+    <string name="workout_detail_title">Workout</string>
+    <string name="todays_workout_title">Today\'s Workout</string>
+    <string name="start_workout">Start workout</string>
+    <string name="finish_workout">Finish workout</string>
+    <string name="discard_workout">Discard</string>
+    <string name="moves_done_fmt">%1$d of %2$d moves done</string>
+    <string name="day_streak">%1$d-day streak</string>
+    <string name="est_minutes">~%1$d min</string>
+    <string name="workout_complete">Workout complete!</string>
+    <string name="nice_work">Nice work. Streak kept alive.</string>
+    <string name="done">Done</string>
+    <string name="confirm_discard_title">Discard workout?</string>
+    <string name="confirm_discard_body">Your progress for this session will be lost.</string>
+    <string name="cancel">Cancel</string>
+    <string name="keep_going">Keep going</string>
+
+    <!-- Today screen -->
+    <string name="today_label">TODAY</string>
+    <string name="stat_steps">STEPS</string>
+    <string name="stat_protein">PROTEIN</string>
+    <string name="stat_exercises">EXERCISES</string>
+    <string name="stat_streak">DAY STREAK</string>
+    <string name="todays_workout_header">TODAY\'S WORKOUT</string>
+    <string name="moves_done">%1$d of %2$d moves done</string>
+    <string name="offline_mode">Offline mode</string>
+    <string name="offline_desc">progress stays on this phone until you sign in</string>
+    <string name="local_only">Local only</string>
+    <string name="steps_left">%1$d left</string>
+
+    <!-- Steps screen -->
+    <string name="steps_today_title">Today\'s steps</string>
+    <string name="steps_goal_title">Daily goal</string>
+    <string name="steps_this_week">This week</string>
+    <string name="health_connect_title">Health Connect</string>
+    <string name="health_connect_connected">Connected — syncing steps automatically</string>
+    <string name="health_connect_not_connected">Not connected — steps won\'t sync</string>
+    <string name="connect">Connect</string>
+    <string name="log_steps_manually">Log steps manually</string>
+    <string name="save">Save</string>
+    <string name="cancel">Cancel</string>
+    <string name="enter_steps">Steps walked today</string>
+
+    <!-- Week screen -->
+    <string name="week_title">Weekly schedule</string>
+    <string name="week_subtitle">Tap a day to change its workout</string>
+
+    <!-- Diet screen -->
+    <string name="diet_calories">CALORIES</string>
+    <string name="diet_protein">PROTEIN</string>
+    <string name="add_food">Add food</string>
+    <string name="food_log">Today\'s log</string>
+    <string name="search_foods">Search foods…</string>
+    <string name="quick_add">Quick add</string>
+    <string name="food_name">Food name</string>
+    <string name="quantity">Quantity</string>
+    <string name="meal_breakfast">Breakfast</string>
+    <string name="meal_lunch">Lunch</string>
+    <string name="meal_snack">Snack</string>
+    <string name="meal_dinner">Dinner</string>
+    <string name="delete">Delete</string>
+    <string name="no_foods_logged">Nothing logged yet — tap + to add your first meal.</string>
+    <string name="of_goal">of %1$s</string>
+
+    <!-- Stats screen -->
+    <string name="stats_title">Your progress</string>
+    <string name="stats_workouts">Workouts</string>
+    <string name="stats_total_steps">Total steps</string>
+    <string name="stats_best_streak">Best streak</string>
+    <string name="personal_records">Personal records</string>
+    <string name="steps_14_days">Steps — last 14 days</string>
+    <string name="no_data_yet">Not enough data yet. Keep training.</string>
+
+    <!-- Settings screen -->
+    <string name="settings_profile">Profile</string>
+    <string name="sign_in_google">Continue with Google</string>
+    <string name="sign_out">Sign out</string>
+    <string name="theme_title">Theme</string>
+    <string name="reminders_title">Reminders</string>
+    <string name="reminder_gym">Gym time</string>
+    <string name="reminder_lunch">Lunch</string>
+    <string name="reminder_snack">Evening snack</string>
+    <string name="reminder_dinner">Dinner</string>
+    <string name="step_goal_title">Daily step goal</string>
+    <string name="protein_goal_title">Daily protein goal (g)</string>
+    <string name="avatar_title">Avatar</string>
+    <string name="change_avatar">Change avatar</string>
+    <string name="app_version">FIT2X v1.0.0 · native build</string>
+
+    <!-- Login screen -->
+    <string name="login_eyebrow">FIT2X · TRAINING OS</string>
+    <string name="login_hero">Train.\nLog.\nProgress.</string>
+    <string name="login_subtitle">Sign in to protect your plan, progress, steps and settings across devices.</string>
+    <string name="login_google_button">Continue with Google</string>
+    <string name="login_signing_in">Signing in…</string>
+    <string name="login_offline_button">Continue offline</string>
+    <string name="login_bullet_private">Private to your account</string>
+    <string name="login_bullet_offline">Works offline after sign-in</string>
+</resources>
