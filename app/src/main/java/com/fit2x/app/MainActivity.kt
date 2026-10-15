@@ -109,7 +109,8 @@ class MainActivity : ComponentActivity() {
                             // Persist theme choice to the profile.
                             // (Fire-and-forget is fine — UI already reflects it.)
                             persistTheme(selected.id)
-                        }
+                        },
+                        signInLauncher = launcher
                     )
                 }
             }
@@ -161,7 +162,8 @@ private fun SplashScreen() {
 fun Fit2xApp(
     authViewModel: AuthViewModel,
     currentTheme: Fit2xTheme,
-    onThemeSelected: (Fit2xTheme) -> Unit
+    onThemeSelected: (Fit2xTheme) -> Unit,
+    signInLauncher: androidx.activity.result.ActivityResultLauncher<android.content.Intent>
 ) {
     val context = LocalContext.current
     val activity = context as Activity
@@ -229,7 +231,7 @@ fun Fit2xApp(
                     reminderViewModel = reminderViewModel,
                     currentTheme = currentTheme,
                     onThemeSelected = onThemeSelected,
-                    onSignIn = { authViewModel.signIn(launcher) }
+                    onSignIn = { authViewModel.signIn(signInLauncher) }
                 )
             }
             composable(Screen.WorkoutDetail.route) {
