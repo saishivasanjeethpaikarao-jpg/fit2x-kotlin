@@ -63,6 +63,9 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
+        // Capture the launcher for use in composables.
+        val signInLauncher = googleSignInLauncher
+
         // Ensure the notification channel exists before any reminder can fire.
         NotificationHelper.createChannel(this)
 
@@ -89,7 +92,7 @@ class MainActivity : ComponentActivity() {
                     is AuthState.SigningIn -> LoginScreen(
                         authState = s,
                         errors = authViewModel.errors,
-                        onGoogleSignIn = { authViewModel.signIn(googleSignInLauncher) },
+                        onGoogleSignIn = { authViewModel.signIn(signInLauncher) },
                         onContinueOffline = { authViewModel.continueOffline() }
                     )
                     is AuthState.SignedIn,
@@ -220,7 +223,7 @@ fun Fit2xApp(
                     reminderViewModel = reminderViewModel,
                     currentTheme = currentTheme,
                     onThemeSelected = onThemeSelected,
-                    onSignIn = { authViewModel.signIn(googleSignInLauncher) }
+                    onSignIn = { authViewModel.signIn(signInLauncher) }
                 )
             }
             composable(Screen.WorkoutDetail.route) {
