@@ -53,18 +53,22 @@ class MainActivity : ComponentActivity() {
 
     private lateinit var authViewModel: AuthViewModel
 
+    private lateinit var signInLauncher: androidx.activity.result.ActivityResultLauncher<android.content.Intent>
+
     private val googleSignInLauncher = registerForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()
     ) { result ->
-        authViewModel.handleSignInResult(result.data)
+        if (::authViewModel.isInitialized) {
+            authViewModel.handleSignInResult(result.data)
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        // Capture the launcher for use in composables.
-        val signInLauncher = googleSignInLauncher
+        // Make the launcher accessible to composables via the property.
+        signInLauncher = googleSignInLauncher
 
         // Ensure the notification channel exists before any reminder can fire.
         NotificationHelper.createChannel(this)
@@ -92,7 +96,7 @@ class MainActivity : ComponentActivity() {
                     is AuthState.SigningIn -> LoginScreen(
                         authState = s,
                         errors = authViewModel.errors,
-                        onGoogleSignIn = { authViewModel.signIn(signInLauncher) },
+                        onGoogleSignIn = { authViewModel.signIn(this@MainActivity.signInLauncher) },
                         onContinueOffline = { authViewModel.continueOffline() }
                     )
                     is AuthState.SignedIn,
@@ -223,7 +227,7 @@ fun Fit2xApp(
                     reminderViewModel = reminderViewModel,
                     currentTheme = currentTheme,
                     onThemeSelected = onThemeSelected,
-                    onSignIn = { authViewModel.signIn(signInLauncher) }
+                    onSignIn = { authViewModel.signIn(this@MainActivity.signInLauncher) }
                 )
             }
             composable(Screen.WorkoutDetail.route) {
