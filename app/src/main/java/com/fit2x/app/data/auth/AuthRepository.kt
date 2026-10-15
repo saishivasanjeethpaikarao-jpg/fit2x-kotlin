@@ -7,9 +7,9 @@ import androidx.credentials.CredentialManager
 import androidx.credentials.GetCredentialRequest
 import androidx.credentials.exceptions.GetCredentialCancellationException
 import androidx.credentials.exceptions.GetCredentialException
-import androidx.credentials.play.services.auth.GetGoogleIdOption
-import androidx.credentials.play.services.auth.GoogleIdTokenCredential
-import androidx.credentials.play.services.auth.GoogleIdTokenParsingException
+import androidx.credentials.play.services.auth.GetSignInWithGoogleOption
+import androidx.credentials.CustomCredential
+import androidx.credentials.exceptions.GetCredentialCustomException
 import com.fit2x.app.data.local.UserProfileDao
 import com.google.firebase.FirebaseNetworkException
 import com.google.firebase.auth.FirebaseAuth
@@ -103,9 +103,8 @@ class AuthRepository(
         }
 
         val credentialManager = CredentialManager.create(appContext)
-        val googleIdOption = GetGoogleIdOption.Builder()
+        val googleIdOption = GetSignInWithGoogleOption.Builder(serverClientId)
             .setFilterByAuthorizedAccounts(false)
-            .setServerClientId(serverClientId)
             .setAutoSelectEnabled(true)
             .build()
         val request = GetCredentialRequest.Builder()
@@ -125,15 +124,23 @@ class AuthRepository(
             return@flow
         }
 
-        val googleIdTokenCredential = try {
-            GoogleIdTokenCredential.createFrom(response.credential.data)
-        } catch (e: GoogleIdTokenParsingException) {
-            emit(AuthResult.Error("Couldn't read the Google sign-in response. Please try again."))
-            return@flow
-        }
+        val credential = response.credential
+        // Parse the Google ID token from the credential data.
+        // GetSignInWithGoogleOption returns a CustomCredential with the ID token
+        // in the data bundle under "com.google.android.libraries.identity.googleid.BUNDLE_KEY_ID_TOKEN".
+        val idToken: String = try {
+            if (credential is CustomCredential) {
+                credential.data.getString("com.google.android.libraries.identity.googleid.BUNDLE_KEY_ID_TOKEN")
+            } else {
+                null
+            }
+        } catch (_: Exception) { null }
+            ?: run {
+                emit(AuthResult.Error("Couldn't read the Google sign-in response. Please try again."))
+                return@flow
+            }
 
-        val firebaseCredential =
-            GoogleAuthProvider.getCredential(googleIdTokenCredential.idToken, null)
+        val firebaseCredential = GoogleAuthProvider.getCredential(idToken, null)
         val authResult = try {
             auth.signInWithCredential(firebaseCredential).await()
         } catch (e: FirebaseNetworkException) {
@@ -148,10 +155,10 @@ class AuthRepository(
         }
 
         val fbUser = authResult.user
-        if (fbUser == null) {
-            emit(AuthResult.Error("Sign-in didn't return a user. Please try again."))
-            return@flow
-        }
+            ?: run {
+                emit(AuthResult.Error("Sign-in didn't return a user. Please try again."))
+                return@flow
+            }
 
         val user = Fit2xUser(
             uid = fbUser.uid,
