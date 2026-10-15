@@ -134,8 +134,7 @@ object HealthConnectManager {
     ): Long {
         val request = AggregateRequest(
             metrics = setOf(StepsRecord.COUNT_TOTAL),
-            timeRangeFilter = TimeRangeFilter.between(start.toInstant(), end.toInstant()),
-            dataOrigins = emptySet()
+            timeRangeFilter = TimeRangeFilter.between(start.toInstant(), end.toInstant())
         )
         val result: AggregationResult = client.aggregate(request)
         return result[StepsRecord.COUNT_TOTAL] ?: 0L

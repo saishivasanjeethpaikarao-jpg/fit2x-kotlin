@@ -91,11 +91,12 @@ class ReminderSettingsViewModel(application: Application) : AndroidViewModel(app
 fun rememberNotificationPermissionRequest(
     onResult: (granted: Boolean) -> Unit = {}
 ): Pair<androidx.activity.result.ActivityResultLauncher<String>, Boolean> {
+    val context = androidx.compose.ui.platform.LocalContext.current
     var granted by remember {
         mutableStateOf(
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) true
             else ContextCompat.checkSelfPermission(
-                androidx.compose.ui.platform.LocalContext.current,
+                context,
                 Manifest.permission.POST_NOTIFICATIONS
             ) == PackageManager.PERMISSION_GRANTED
         )

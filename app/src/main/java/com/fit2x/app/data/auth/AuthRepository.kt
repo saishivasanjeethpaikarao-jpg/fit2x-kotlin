@@ -112,7 +112,22 @@ class AuthRepository(
             .build()
 
         val response = try {
-            credentialManager.getCredential(request = request, activity = activity)
+            kotlinx.coroutines.suspendCancellableCoroutine { cont ->
+                credentialManager.getCredential(
+                    request = request,
+                    activity = activity,
+                    cancellationSignal = null,
+                    executor = appContext.mainExecutor,
+                    callback = object : androidx.credentials.OutcomeReceiver<androidx.credentials.GetCredentialResponse, GetCredentialException> {
+                        override fun onResult(result: androidx.credentials.GetCredentialResponse) {
+                            cont.resume(result) {}
+                        }
+                        override fun onError(e: GetCredentialException) {
+                            cont.resumeWithException(e)
+                        }
+                    }
+                )
+            }
         } catch (e: GetCredentialCancellationException) {
             emit(AuthResult.Cancelled)
             return@flow
@@ -194,13 +209,16 @@ class AuthRepository(
         prefs.edit().putBoolean(KEY_OFFLINE_MODE, offline).apply()
     }
 
-    private fun mapCredentialError(e: GetCredentialException): String = when (e.type) {
-        GetCredentialException.TYPE_NO_CREDENTIAL ->
-            "No Google accounts on this phone. Add one in Settings > Passwords & accounts, then try again."
-        GetCredentialException.TYPE_INTERRUPTED ->
-            "Sign-in was interrupted. Please try again."
-        else ->
-            "Google sign-in failed: ${e.message ?: "unknown error"}"
+    private fun mapCredentialError(e: GetCredentialException): String {
+        val msg = e.message.orEmpty()
+        return when {
+            "no credential" in msg.lowercase() || "no google accounts" in msg.lowercase() ->
+                "No Google accounts on this phone. Add one in Settings > Passwords & accounts, then try again."
+            "interrupted" in msg.lowercase() || "cancel" in msg.lowercase() ->
+                "Sign-in was interrupted. Please try again."
+            else ->
+                "Google sign-in failed: ${e.message ?: "unknown error"}"
+        }
     }
 
     /**

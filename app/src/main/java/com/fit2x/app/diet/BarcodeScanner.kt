@@ -27,7 +27,7 @@ import com.journeyapps.barcodescanner.DefaultDecoderFactory
  */
 object BarcodeScanner {
     internal const val EXTRA_BARCODE = "com.fit2x.app.diet.EXTRA_BARCODE"
-    private const val REQUEST_CAMERA = 41
+    const val REQUEST_CAMERA = 41
 
     /** True when the device has any camera. Declared optional in the manifest. */
     fun isCameraAvailable(context: Context): Boolean =
