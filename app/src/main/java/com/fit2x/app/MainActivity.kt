@@ -44,8 +44,10 @@ import com.fit2x.app.ui.screens.WorkoutDetailScreen
 import com.fit2x.app.ui.theme.Fit2xTheme
 import com.fit2x.app.workout.WorkoutGraph
 import com.fit2x.app.workout.WorkoutViewModel
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
 
