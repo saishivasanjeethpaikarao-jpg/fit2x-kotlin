@@ -50,7 +50,6 @@
     <string name="connect">Connect</string>
     <string name="log_steps_manually">Log steps manually</string>
     <string name="save">Save</string>
-    <string name="cancel">Cancel</string>
     <string name="enter_steps">Steps walked today</string>
 
     <!-- Week screen -->
