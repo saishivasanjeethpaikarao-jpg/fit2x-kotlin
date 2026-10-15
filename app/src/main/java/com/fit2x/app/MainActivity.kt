@@ -81,6 +81,8 @@ class MainActivity : ComponentActivity() {
             )
             this@MainActivity.authViewModel = authViewModel
             val authState by authViewModel.authState.collectAsState()
+            // Capture launcher for nested composables (label doesn't resolve at depth).
+            val launcher = this@MainActivity.signInLauncher
 
             // Theme follows the persisted profile; falls back to Electric.
             val profile by graph.database.userProfileDao()
@@ -96,7 +98,7 @@ class MainActivity : ComponentActivity() {
                     is AuthState.SigningIn -> LoginScreen(
                         authState = s,
                         errors = authViewModel.errors,
-                        onGoogleSignIn = { authViewModel.signIn(this@MainActivity.signInLauncher) },
+                        onGoogleSignIn = { authViewModel.signIn(launcher) },
                         onContinueOffline = { authViewModel.continueOffline() }
                     )
                     is AuthState.SignedIn,
@@ -227,7 +229,7 @@ fun Fit2xApp(
                     reminderViewModel = reminderViewModel,
                     currentTheme = currentTheme,
                     onThemeSelected = onThemeSelected,
-                    onSignIn = { authViewModel.signIn(this@MainActivity.signInLauncher) }
+                    onSignIn = { authViewModel.signIn(launcher) }
                 )
             }
             composable(Screen.WorkoutDetail.route) {
