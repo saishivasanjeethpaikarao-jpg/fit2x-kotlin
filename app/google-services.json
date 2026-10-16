@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "800551440085",
+    "project_id": "studio-6493633382-76662",
+    "storage_bucket": "studio-6493633382-76662.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:800551440085:android:a99bc45c88a8207ca25c5c",
+        "android_client_info": {
+          "package_name": "com.fit2x.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "800551440085-t1pl0l9at5ebd24v3b86n71lc396u6dt.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDMcg_n4-SwNLQV_73cjT-QLISHFOt8tE4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "800551440085-t1pl0l9at5ebd24v3b86n71lc396u6dt.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
