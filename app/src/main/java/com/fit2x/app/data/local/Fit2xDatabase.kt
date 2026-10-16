@@ -27,6 +27,8 @@ data class UserProfile(
     val themeId: String = "ELECTRIC",
     val stepGoal: Int = 10_000,
     val proteinGoalGrams: Int = 70,
+    /** Daily calorie target (was hardcoded 2200 before v2). */
+    val calorieGoal: Int = 2_200,
     val avatarUri: String? = null,
     val streakDays: Int = 0,
     val lastActiveDate: String? = null // yyyy-MM-dd
@@ -78,6 +80,17 @@ interface UserProfileDao {
 
     @Upsert
     suspend fun upsert(profile: UserProfile)
+
+    /**
+     * Atomic step-goal write — no read-modify-write, so rapid stepper taps
+     * can't lose increments.
+     */
+    @Query("UPDATE user_profile SET stepGoal = :goal WHERE id = 'me'")
+    suspend fun updateStepGoal(goal: Int)
+
+    /** Atomic calorie-goal write. */
+    @Query("UPDATE user_profile SET calorieGoal = :goal WHERE id = 'me'")
+    suspend fun updateCalorieGoal(goal: Int)
 }
 
 @Dao
@@ -102,7 +115,20 @@ interface FoodEntryDao {
 
     @Delete
     suspend fun delete(entry: FoodEntry)
+
+    /** Total protein per day, highest first — drives the "Most protein in a day" record. */
+    @Query(
+        "SELECT date, SUM(proteinGrams) AS totalProtein FROM food_entries " +
+            "GROUP BY date ORDER BY totalProtein DESC LIMIT 60"
+    )
+    fun observeProteinByDay(): Flow<List<DayProteinTotal>>
 }
+
+/** Result of [FoodEntryDao.observeProteinByDay]. */
+data class DayProteinTotal(
+    val date: String,
+    val totalProtein: Double
+)
 
 @Dao
 interface WorkoutSessionDao {
@@ -125,9 +151,21 @@ interface WorkoutSessionDao {
     suspend fun update(session: WorkoutSession)
 }
 
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
+
 // ---------------------------------------------------------------------------
 // Database
 // ---------------------------------------------------------------------------
+
+/** v1 -> v2: adds UserProfile.calorieGoal (was a hardcoded 2200). */
+val MIGRATION_1_2: Migration = object : Migration(1, 2) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            "ALTER TABLE user_profile ADD COLUMN calorieGoal INTEGER NOT NULL DEFAULT 2200"
+        )
+    }
+}
 
 @Database(
     entities = [
@@ -136,7 +174,7 @@ interface WorkoutSessionDao {
         FoodEntry::class,
         WorkoutSession::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class Fit2xDatabase : RoomDatabase() {

@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.fit2x.app.data.local.FoodEntry
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -11,6 +12,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -19,12 +21,15 @@ data class DietUiState(
     val entries: List<FoodEntry> = emptyList(),
     val proteinGrams: Double = 0.0,
     val calories: Int = 0,
-    val proteinGoal: Int = 70
+    val proteinGoal: Int = 70,
+    val calorieGoal: Int = 2_200
 ) {
     val proteinProgress: Float
         get() = if (proteinGoal > 0) (proteinGrams / proteinGoal).toFloat().coerceIn(0f, 1f) else 0f
     val proteinLeft: Double
         get() = (proteinGoal - proteinGrams).coerceAtLeast(0.0)
+    val calorieProgress: Float
+        get() = if (calorieGoal > 0) (calories.toFloat() / calorieGoal).coerceIn(0f, 1f) else 0f
 }
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -34,6 +39,14 @@ class DietViewModel(
 
     private val date = MutableStateFlow(repository.today())
 
+    init {
+        // Warm the bundled food database off the Main thread, so the first
+        // search keystroke never does asset I/O + JSON parsing on the UI thread.
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.allFoods()
+        }
+    }
+
     /** Combined hero state for the screen. */
     val uiState: StateFlow<DietUiState> = date
         .flatMapLatest { d ->
@@ -41,9 +54,10 @@ class DietViewModel(
                 repository.getEntries(d),
                 repository.getTodayProtein(d),
                 repository.getTodayCalories(d),
-                repository.observeProteinGoal()
-            ) { entries, protein, calories, goal ->
-                DietUiState(entries, protein, calories, goal)
+                repository.observeProteinGoal(),
+                repository.observeCalorieGoal()
+            ) { entries, protein, calories, proteinGoal, calorieGoal ->
+                DietUiState(entries, protein, calories, proteinGoal, calorieGoal)
             }
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DietUiState())
@@ -56,7 +70,7 @@ class DietViewModel(
 
     /** Live search results from the bundled offline database. */
     val searchResults: StateFlow<List<Food>> = searchQuery
-        .flatMapLatest { q -> flow { emit(repository.searchFoods(q)) } }
+        .flatMapLatest { q -> flow { emit(repository.searchFoods(q)) }.flowOn(Dispatchers.Default) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     fun onSearchQueryChange(query: String) {

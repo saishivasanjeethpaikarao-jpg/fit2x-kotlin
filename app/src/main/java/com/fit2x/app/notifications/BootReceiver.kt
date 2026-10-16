@@ -6,26 +6,28 @@ import android.content.Intent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 
 /**
- * WorkManager's periodic schedule does not survive a reboot on its own —
- * re-schedule all reminders when the device finishes booting.
+ * Exact alarms do not survive a reboot — re-register the whole reminder
+ * schedule when the device finishes booting. Also covers the WorkManager
+ * fallback path.
  */
 class BootReceiver : BroadcastReceiver() {
-
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action != Intent.ACTION_BOOT_COMPLETED) return
         val pending = goAsync()
-        scope.launch {
+        val job = SupervisorJob()
+        CoroutineScope(job + Dispatchers.IO).launch {
             try {
                 NotificationHelper.scheduleAll(context.applicationContext)
             } catch (_: Exception) {
                 // Best-effort: a missed re-schedule here is retried on next app launch.
             } finally {
                 pending.finish()
+                job.cancel()
             }
         }
     }

@@ -44,7 +44,6 @@ import com.fit2x.app.ui.components.StatCard
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
 import java.time.LocalDate
 
@@ -73,12 +72,8 @@ class StatsViewModel(
         kotlinx.coroutines.flow.combine(
             database.workoutSessionDao().observeRecent(400),
             database.stepEntryDao().observeRecent(30),
-            database.foodEntryDao().let { dao ->
-                // Last 30 days of food entries for the protein record.
-                // FoodEntryDao has no observeRecent; approximate via today flow.
-                kotlinx.coroutines.flow.flowOf(emptyList<com.fit2x.app.data.local.FoodEntry>())
-            }
-        ) { sessions, stepEntries, _ ->
+            database.foodEntryDao().observeProteinByDay()
+        ) { sessions, stepEntries, proteinByDay ->
             val totalWorkouts = sessions.size
             val totalSteps = stepEntries.sumOf { it.steps.toLong() }
 
@@ -119,6 +114,7 @@ class StatsViewModel(
             }
 
             val bestDay = stepEntries.maxByOrNull { it.steps }
+            val bestProteinDay = proteinByDay.maxByOrNull { it.totalProtein }
 
             StatsUiState(
                 totalWorkouts = totalWorkouts,
@@ -129,7 +125,9 @@ class StatsViewModel(
                 records = listOf(
                     "Most steps in a day" to (bestDay?.let { "%,d".format(it.steps) } ?: "—"),
                     "Longest streak" to if (bestStreak > 0) "$bestStreak days" else "—",
-                    "Workouts logged" to "$totalWorkouts"
+                    "Most protein in a day" to (bestProteinDay?.let {
+                        "%dg".format(it.totalProtein.toInt())
+                    } ?: "—")
                 )
             )
         }.stateIn(
@@ -155,8 +153,6 @@ class StatsViewModelFactory(
 
 @Composable
 fun StatsScreen(
-    healthViewModel: com.fit2x.app.health.HealthViewModel = viewModel(),
-    workoutViewModel: com.fit2x.app.workout.WorkoutViewModel = viewModel(),
     modifier: Modifier = Modifier
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current

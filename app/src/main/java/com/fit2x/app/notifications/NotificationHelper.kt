@@ -1,5 +1,6 @@
 package com.fit2x.app.notifications
 
+import android.app.AlarmManager
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -22,12 +23,17 @@ import java.util.Calendar
 import java.util.concurrent.TimeUnit
 
 /**
- * Creates the channel, shows notifications, and owns the WorkManager schedule.
+ * Creates the channel, shows notifications, and owns the reminder schedule.
  *
- * Scheduling model: one unique 24-hour PeriodicWorkRequest per reminder type,
- * with an initial delay computed to the next occurrence of the reminder's time.
- * WorkManager survives app kills; [BootReceiver] re-schedules after reboot.
- * Times are user-editable — changing a time re-enqueues that reminder's work.
+ * Scheduling model: one exact [AlarmManager] alarm per reminder type, fired by
+ * [AlarmReceiver], which re-arms the next day's alarm after each firing. Exact
+ * alarms survive Doze and fire at the chosen wall-clock time. When exact alarms
+ * are unavailable (API 31+ without the user grant in system Settings), the
+ * schedule falls back to one 24-hour [androidx.work.PeriodicWorkRequest] per
+ * reminder via [ReminderWorker].
+ *
+ * [BootReceiver] re-registers the schedule after reboot (alarms don't survive it).
+ * Times are user-editable — changing a time re-schedules that reminder immediately.
  */
 object NotificationHelper {
 
@@ -102,7 +108,7 @@ object NotificationHelper {
         ReminderType.entries.forEach { type ->
             val prefs = settings.prefsFlow(type).first()
             if (prefs.enabled) {
-                enqueueReminder(context, type, prefs.hour, prefs.minute)
+                scheduleReminder(context, type, prefs.hour, prefs.minute)
             } else {
                 cancelReminder(context, type)
             }
@@ -114,19 +120,70 @@ object NotificationHelper {
         val settings = ReminderSettings(context)
         val prefs = settings.prefsFlow(type).first()
         if (prefs.enabled) {
-            enqueueReminder(context, type, prefs.hour, prefs.minute)
+            scheduleReminder(context, type, prefs.hour, prefs.minute)
         } else {
             cancelReminder(context, type)
         }
     }
 
-    /** Cancel every reminder. */
+    /** Cancel every reminder — exact alarms and any WorkManager fallback work. */
     fun cancelAll(context: Context) {
-        val wm = WorkManager.getInstance(context)
-        ReminderType.entries.forEach { wm.cancelUniqueWork(uniqueWorkName(it)) }
+        ReminderType.entries.forEach { cancelReminder(context, it) }
     }
 
-    private fun enqueueReminder(context: Context, type: ReminderType, hour: Int, minute: Int) {
+    /**
+     * Primary path: exact alarm so the reminder fires at the chosen wall-clock
+     * time even under Doze. Falls back to WorkManager when exact alarms can't
+     * be scheduled (API 31+ where the user hasn't granted them in system Settings).
+     */
+    fun scheduleReminder(context: Context, type: ReminderType, hour: Int, minute: Int) {
+        if (canUseExactAlarms(context)) {
+            scheduleExactAlarm(context, type, hour, minute)
+        } else {
+            enqueueReminderWork(context, type, hour, minute)
+        }
+    }
+
+    /** True when [AlarmManager.setExactAndAllowWhileIdle] may be used. */
+    fun canUseExactAlarms(context: Context): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return true
+        val am = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        return am.canScheduleExactAlarms()
+    }
+
+    /**
+     * One-shot exact alarm for the next occurrence of (hour, minute).
+     * [AlarmReceiver] re-arms the following day after firing.
+     */
+    fun scheduleExactAlarm(context: Context, type: ReminderType, hour: Int, minute: Int) {
+        val am = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !am.canScheduleExactAlarms()) {
+            enqueueReminderWork(context, type, hour, minute)
+            return
+        }
+        try {
+            am.setExactAndAllowWhileIdle(
+                AlarmManager.RTC_WAKEUP,
+                nextTriggerMillis(hour, minute),
+                AlarmReceiver.pendingIntent(context, type)
+            )
+        } catch (_: SecurityException) {
+            // Permission revoked between the check and the call — fall back.
+            enqueueReminderWork(context, type, hour, minute)
+        }
+    }
+
+    private fun cancelReminder(context: Context, type: ReminderType) {
+        // Cancel both paths: the exact alarm and the WorkManager fallback.
+        AlarmReceiver.cancel(context, type)
+        WorkManager.getInstance(context).cancelUniqueWork(uniqueWorkName(type))
+    }
+
+    /**
+     * Fallback path when exact alarms are unavailable: one 24h periodic worker.
+     * Uses CANCEL_AND_REENQUEUE so a changed time actually re-anchors the schedule.
+     */
+    private fun enqueueReminderWork(context: Context, type: ReminderType, hour: Int, minute: Int) {
         val request = PeriodicWorkRequestBuilder<ReminderWorker>(24, TimeUnit.HOURS)
             .setInitialDelay(millisUntilNext(hour, minute), TimeUnit.MILLISECONDS)
             .setInputData(workDataOf(ReminderWorker.KEY_TYPE to type.key))
@@ -134,16 +191,16 @@ object NotificationHelper {
             .build()
         WorkManager.getInstance(context).enqueueUniquePeriodicWork(
             uniqueWorkName(type),
-            ExistingPeriodicWorkPolicy.UPDATE,
+            ExistingPeriodicWorkPolicy.CANCEL_AND_REENQUEUE,
             request
         )
     }
 
-    private fun cancelReminder(context: Context, type: ReminderType) {
-        WorkManager.getInstance(context).cancelUniqueWork(uniqueWorkName(type))
-    }
+    private fun millisUntilNext(hour: Int, minute: Int): Long =
+        nextTriggerMillis(hour, minute) - System.currentTimeMillis()
 
-    private fun millisUntilNext(hour: Int, minute: Int): Long {
+    /** Absolute wall-clock millis of the next occurrence of (hour, minute). */
+    private fun nextTriggerMillis(hour: Int, minute: Int): Long {
         val now = Calendar.getInstance()
         val next = Calendar.getInstance().apply {
             set(Calendar.HOUR_OF_DAY, hour)
@@ -154,6 +211,6 @@ object NotificationHelper {
         if (!next.after(now)) {
             next.add(Calendar.DAY_OF_YEAR, 1)
         }
-        return next.timeInMillis - now.timeInMillis
+        return next.timeInMillis
     }
 }

@@ -6,6 +6,7 @@ import android.content.Intent
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import com.fit2x.app.data.local.UserProfileDao
+import com.fit2x.app.health.StepSyncWorker
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount
 import com.google.android.gms.auth.api.signin.GoogleSignInClient
@@ -160,6 +161,12 @@ class AuthRepository(
             googleSignInClient()?.signOut()?.await()
         } catch (_: Exception) {
             // Best-effort
+        }
+        // Stop the background step sync — no point syncing with no user.
+        try {
+            StepSyncWorker.cancel(appContext)
+        } catch (_: Exception) {
+            // Best-effort.
         }
         setOfflineMode(false)
         val current = profileDao.observeProfile().firstOrNull()

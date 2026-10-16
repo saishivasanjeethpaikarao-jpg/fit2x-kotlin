@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.room.Room
 import com.fit2x.app.data.auth.AuthRepository
 import com.fit2x.app.data.local.Fit2xDatabase
+import com.fit2x.app.data.local.MIGRATION_1_2
 import com.fit2x.app.diet.FoodRepository
 import com.fit2x.app.workout.WorkoutRepository
 import com.google.firebase.auth.FirebaseAuth
@@ -41,6 +42,7 @@ class AppGraph(private val app: Application) {
 
     val database: Fit2xDatabase by lazy {
         Room.databaseBuilder(context, Fit2xDatabase::class.java, DB_NAME)
+            .addMigrations(MIGRATION_1_2)
             .fallbackToDestructiveMigration()
             .build()
     }

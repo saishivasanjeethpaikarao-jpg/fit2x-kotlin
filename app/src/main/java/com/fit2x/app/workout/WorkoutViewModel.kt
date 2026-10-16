@@ -4,7 +4,7 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import androidx.room.Room
+import com.fit2x.app.appGraph
 import com.fit2x.app.data.local.Fit2xDatabase
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -21,20 +21,16 @@ import kotlinx.coroutines.launch
  */
 object WorkoutGraph {
     @Volatile
-    private var database: Fit2xDatabase? = null
-
-    @Volatile
     private var repository: WorkoutRepository? = null
 
+    /**
+     * The ONE Room instance for the whole app, owned by AppGraph.
+     * Never build a second database on "fit2x-db" — Room's invalidation
+     * tracker is per-instance, so a second instance breaks cross-feature
+     * Flow observers (e.g. Stats going stale after a workout).
+     */
     fun provideDatabase(context: Context): Fit2xDatabase =
-        database ?: synchronized(this) {
-            database ?: Room.databaseBuilder(
-                context.applicationContext,
-                Fit2xDatabase::class.java,
-                // Must match AppGraph.DB_NAME — one database file for the whole app.
-                "fit2x-db"
-            ).build().also { database = it }
-        }
+        context.appGraph().database
 
     fun provideRepository(context: Context): WorkoutRepository =
         repository ?: synchronized(this) {
@@ -102,6 +98,14 @@ class WorkoutViewModel(
     private val _activeSessionId = MutableStateFlow<Long?>(null)
     val activeSessionId: StateFlow<Long?> = _activeSessionId.asStateFlow()
 
+    /**
+     * Guards [startWorkout] against double-taps: set on the Main thread
+     * before launching, so a second tap in the same frame is rejected.
+     * Observed by UI to disable the start button while launching.
+     */
+    private val _starting = MutableStateFlow(false)
+    val starting: StateFlow<Boolean> = _starting.asStateFlow()
+
     private val _completedExercises = MutableStateFlow<Set<String>>(emptySet())
     val completedExercises: StateFlow<Set<String>> = _completedExercises.asStateFlow()
 
@@ -116,19 +120,26 @@ class WorkoutViewModel(
     val isSessionActive: Boolean get() = _activeSessionId.value != null
 
     fun startWorkout() {
-        if (_activeSessionId.value != null) return
+        if (_activeSessionId.value != null || _starting.value) return
         val workout = todayWorkout.value ?: return
+        // Set synchronously on Main — a second tap before the coroutine
+        // starts can no longer slip through the guard.
+        _starting.value = true
         viewModelScope.launch {
-            val id = repository.startSession(
-                date = todayDateString(),
-                title = workout.title,
-                totalMoves = workout.exercises.size
-            )
-            _activeSessionId.value = id
-            _completedExercises.value = emptySet()
-            _elapsedSeconds.value = 0L
-            _workoutFinished.value = false
-            startTimer()
+            try {
+                val id = repository.startSession(
+                    date = todayDateString(),
+                    title = workout.title,
+                    totalMoves = workout.exercises.size
+                )
+                _activeSessionId.value = id
+                _completedExercises.value = emptySet()
+                _elapsedSeconds.value = 0L
+                _workoutFinished.value = false
+                startTimer()
+            } finally {
+                _starting.value = false
+            }
         }
     }
 

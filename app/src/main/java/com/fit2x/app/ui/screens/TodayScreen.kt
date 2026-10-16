@@ -25,6 +25,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -50,7 +51,6 @@ import com.fit2x.app.workout.WorkoutViewModel
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
-import kotlinx.coroutines.flow.map
 
 /**
  * Today — the home screen. Pulls live data from the real feature ViewModels:
@@ -76,11 +76,16 @@ fun TodayScreen(
     val todayWorkout by workoutViewModel.todayWorkout.collectAsState()
     val streak by workoutViewModel.streak.collectAsState()
 
-    val profile by context.appGraph().database.userProfileDao()
-        .observeProfile()
-        .map { it }
-        .collectAsState(initial = null)
+    val profile by remember {
+        context.appGraph().database.userProfileDao().observeProfile()
+    }.collectAsState(initial = null)
     val stepGoal = profile?.stepGoal ?: 10_000
+
+    // Today's workout sessions — observed once per day, not per recomposition.
+    val todaySessions by remember(today) {
+        context.appGraph().database.workoutSessionDao()
+            .observeDay(today.toString())
+    }.collectAsState(initial = emptyList())
 
     val authState = authViewModel?.authState?.collectAsState()?.value
     val isSignedIn = authState is AuthState.SignedIn
@@ -93,8 +98,8 @@ fun TodayScreen(
     val workoutFocus = todayWorkout?.subtitle?.ifBlank { "Easy walk and mobility. Keep it light." }
         ?: "Easy walk and mobility. Keep it light."
     val totalMoves = todayWorkout?.exercises?.size ?: 2
-    // Completed moves come from today's sessions.
-    val completedMoves = 0 // sessions are tracked in WorkoutDetail; today shows plan size
+    // Completed moves from today's actual sessions (not hardcoded).
+    val completedMoves = todaySessions.sumOf { it.completedMoves }.coerceAtMost(totalMoves)
 
     Column(
         modifier = modifier

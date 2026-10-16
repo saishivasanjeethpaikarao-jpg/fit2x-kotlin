@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -18,6 +20,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
@@ -51,6 +54,8 @@ import com.fit2x.app.data.local.FoodEntry
 import com.fit2x.app.diet.DietViewModel
 import com.fit2x.app.diet.Food
 import com.fit2x.app.diet.MealType
+import com.fit2x.app.diet.BarcodeUiState
+import com.fit2x.app.diet.rememberBarcodeScanLauncher
 import com.fit2x.app.ui.components.ProgressRing
 
 /**
@@ -133,16 +138,15 @@ fun DietScreen(
                             )
                         }
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            val calorieGoal = 2_200
                             ProgressRing(
-                                progress = (state.calories.toFloat() / calorieGoal).coerceIn(0f, 1f),
+                                progress = state.calorieProgress,
                                 centerText = "${state.calories}",
                                 centerSubText = stringResource(R.string.diet_calories),
                                 size = 110.dp
                             )
                             Spacer(modifier = Modifier.height(6.dp))
                             Text(
-                                text = stringResource(R.string.of_goal, "$calorieGoal"),
+                                text = stringResource(R.string.of_goal, "${state.calorieGoal}"),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = scheme.onSurfaceVariant
                             )
@@ -195,8 +199,14 @@ fun DietScreen(
     if (showAddDialog) {
         AddFoodDialog(
             viewModel = vm,
-            onDismiss = { showAddDialog = false },
-            onAdded = { showAddDialog = false }
+            onDismiss = {
+                vm.clearBarcodeState()
+                showAddDialog = false
+            },
+            onAdded = {
+                vm.clearBarcodeState()
+                showAddDialog = false
+            }
         )
     }
 }
@@ -278,6 +288,20 @@ private fun AddFoodDialog(
     var manualMode by remember { mutableStateOf(false) }
 
     val searchResults by viewModel.searchResults.collectAsState()
+    val barcodeState by viewModel.barcodeState.collectAsState()
+
+    // Barcode scanner launcher — delivers the scanned code or null if cancelled.
+    val barcodeLauncher = rememberBarcodeScanLauncher { code ->
+        if (code != null) viewModel.onBarcodeScanned(code)
+    }
+
+    // When a barcode lookup finds a food, auto-select it.
+    LaunchedEffect(barcodeState) {
+        if (barcodeState is BarcodeUiState.Found) {
+            selectedFood = (barcodeState as BarcodeUiState.Found).food
+            manualMode = false
+        }
+    }
 
     LaunchedEffect(query) { viewModel.onSearchQueryChange(query) }
 
@@ -292,18 +316,70 @@ private fun AddFoodDialog(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 item {
-                    OutlinedTextField(
-                        value = query,
-                        onValueChange = {
-                            query = it
-                            manualMode = false
-                            selectedFood = null
-                        },
-                        label = { Text(stringResource(R.string.search_foods)) },
-                        leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        OutlinedTextField(
+                            value = query,
+                            onValueChange = {
+                                query = it
+                                manualMode = false
+                                selectedFood = null
+                            },
+                            label = { Text(stringResource(R.string.search_foods)) },
+                            leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
+                            singleLine = true,
+                            modifier = Modifier.weight(1f)
+                        )
+                        IconButton(
+                            onClick = { barcodeLauncher.launch(Unit) },
+                            modifier = Modifier
+                                .padding(top = 8.dp)
+                        ) {
+                            Icon(
+                                Icons.Filled.QrCodeScanner,
+                                contentDescription = "Scan barcode",
+                                tint = scheme.primary
+                            )
+                        }
+                    }
+                }
+
+                // Barcode lookup status
+                when (val bs = barcodeState) {
+                    is BarcodeUiState.LookingUp -> {
+                        item {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                androidx.compose.material3.CircularProgressIndicator(
+                                    modifier = Modifier.size(20.dp),
+                                    strokeWidth = 2.dp
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "Looking up barcode…",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = scheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                    is BarcodeUiState.Error -> {
+                        item {
+                            Text(
+                                text = bs.message,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = scheme.error,
+                                modifier = Modifier.padding(vertical = 4.dp)
+                            )
+                        }
+                    }
+                    else -> { /* Idle or Found (auto-selected above) */ }
                 }
 
                 if (!manualMode) {

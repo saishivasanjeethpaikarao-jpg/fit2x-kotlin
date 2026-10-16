@@ -215,7 +215,8 @@ fun WeekScreen(
     // Edit dialog: swap the tapped day's workout
     editingDay?.let { day ->
         // All unique workout options across templates + Rest.
-        val options = remember {
+        // Keyed on dayOfWeek so switching days rebuilds the list.
+        val options = remember(day.dayOfWeek) {
             val seen = mutableSetOf<String>()
             buildList {
                 add(
@@ -290,6 +291,20 @@ fun WeekScreen(
             confirmButton = {
                 TextButton(onClick = { editingDay = null }) {
                     Text(stringResource(R.string.cancel))
+                }
+            },
+            dismissButton = {
+                // Reset this day to the template default (clears any override).
+                TextButton(
+                    onClick = {
+                        workoutViewModel.clearDayOverride(day.dayOfWeek)
+                        editingDay = null
+                    }
+                ) {
+                    Text(
+                        text = "Reset day",
+                        color = scheme.error
+                    )
                 }
             }
         )

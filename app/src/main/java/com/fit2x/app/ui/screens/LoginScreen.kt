@@ -1,6 +1,7 @@
 package com.fit2x.app.ui.screens
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -34,9 +35,9 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.collectLatest
 
 /**
- * First-run / signed-out screen. Native Google Sign-In (Credential
- * Manager) — no web popups. Offline mode keeps every feature working
- * locally without an account.
+ * First-run / signed-out screen. Native Google Sign-In via the classic
+ * play-services-auth library — no web popups. Offline mode keeps every
+ * feature working locally without an account.
  */
 @Composable
 fun LoginScreen(
@@ -56,86 +57,94 @@ fun LoginScreen(
 
     val signingIn = authState is AuthState.SigningIn
 
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(32.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.Start
+    Box(
+        modifier = modifier.fillMaxSize(),
+        contentAlignment = Alignment.BottomCenter
     ) {
-        Text(
-            text = stringResource(R.string.login_eyebrow),
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.primary,
-            letterSpacing = 2.sp
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        Text(
-            text = stringResource(R.string.login_hero),
-            style = MaterialTheme.typography.displayMedium.copy(
-                fontWeight = FontWeight.Black,
-                lineHeight = 52.sp
-            ),
-            color = MaterialTheme.colorScheme.onBackground
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        Text(
-            text = stringResource(R.string.login_subtitle),
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Spacer(modifier = Modifier.height(40.dp))
-
-        Button(
-            onClick = onGoogleSignIn,
-            enabled = !signingIn,
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .height(56.dp),
-            shape = RoundedCornerShape(16.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary
-            )
-        ) {
-            if (signingIn) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(24.dp),
-                    color = MaterialTheme.colorScheme.onPrimary,
-                    strokeWidth = 3.dp
-                )
-                Spacer(modifier = Modifier.size(12.dp))
-                Text(text = stringResource(R.string.login_signing_in))
-            } else {
-                Text(
-                    text = stringResource(R.string.login_google_button),
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold)
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        TextButton(
-            onClick = onContinueOffline,
-            enabled = !signingIn,
-            modifier = Modifier.fillMaxWidth()
+                .fillMaxSize()
+                .padding(32.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.Start
         ) {
             Text(
-                text = stringResource(R.string.login_offline_button),
-                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-                color = MaterialTheme.colorScheme.primary
+                text = stringResource(R.string.login_eyebrow),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary,
+                letterSpacing = 2.sp
             )
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = stringResource(R.string.login_hero),
+                style = MaterialTheme.typography.displayMedium.copy(
+                    fontWeight = FontWeight.Black,
+                    lineHeight = 52.sp
+                ),
+                color = MaterialTheme.colorScheme.onBackground
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = stringResource(R.string.login_subtitle),
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(40.dp))
+
+            Button(
+                onClick = onGoogleSignIn,
+                enabled = !signingIn,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                )
+            ) {
+                if (signingIn) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        color = MaterialTheme.colorScheme.onPrimary,
+                        strokeWidth = 3.dp
+                    )
+                    Spacer(modifier = Modifier.size(12.dp))
+                    Text(text = stringResource(R.string.login_signing_in))
+                } else {
+                    Text(
+                        text = stringResource(R.string.login_google_button),
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            TextButton(
+                onClick = onContinueOffline,
+                enabled = !signingIn,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = stringResource(R.string.login_offline_button),
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+
+            Spacer(modifier = Modifier.height(32.dp))
+
+            LoginCheckRow(text = stringResource(R.string.login_bullet_private))
+            Spacer(modifier = Modifier.height(8.dp))
+            LoginCheckRow(text = stringResource(R.string.login_bullet_offline))
         }
 
-        Spacer(modifier = Modifier.height(32.dp))
-
-        LoginCheckRow(text = stringResource(R.string.login_bullet_private))
-        Spacer(modifier = Modifier.height(8.dp))
-        LoginCheckRow(text = stringResource(R.string.login_bullet_offline))
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier.padding(16.dp)
+        )
     }
-
-    SnackbarHost(hostState = snackbarHostState)
 }
 
 @Composable

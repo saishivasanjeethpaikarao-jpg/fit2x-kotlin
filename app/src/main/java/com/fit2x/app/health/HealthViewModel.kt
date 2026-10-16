@@ -120,10 +120,16 @@ class HealthViewModel(application: Application) : AndroidViewModel(application) 
     // Internals
     // -----------------------------------------------------------------------
 
-    /** Observes Room so steps survive restarts and update from the worker. */
+    /**
+     * Observes Room so steps survive restarts and update from the worker.
+     * The date is recomputed on every emission (not pinned at init), so an
+     * app left open past midnight picks up the new day's row as soon as
+     * anything writes to the step table.
+     */
     private suspend fun observeLocalSteps() {
-        val today = LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE)
-        stepDao.observeDay(today).collect { entry ->
+        stepDao.observeRecent(3).collect { entries ->
+            val today = LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE)
+            val entry = entries.firstOrNull { it.date == today }
             // Only overwrite live Health Connect values with stored ones
             // when we don't have permission to read fresh data.
             if (!_permissionGranted.value && entry != null) {

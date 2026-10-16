@@ -7,6 +7,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
+import kotlin.math.roundToInt
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
@@ -109,6 +110,10 @@ class FoodRepository(
     fun observeProteinGoal(): Flow<Int> =
         userProfileDao.observeProfile().map { it?.proteinGoalGrams ?: 70 }
 
+    /** Daily calorie target, from profile or the 2200 default. */
+    fun observeCalorieGoal(): Flow<Int> =
+        userProfileDao.observeProfile().map { it?.calorieGoal ?: 2_200 }
+
     /**
      * Log [food] for [date]. [quantity] scales the serving, e.g. 2.0 = double portion.
      */
@@ -128,7 +133,7 @@ class FoodRepository(
             FoodEntry(
                 date = date,
                 name = food.name,
-                proteinGrams = (food.proteinGrams * qty * 10).toInt() / 10.0,
+                proteinGrams = (food.proteinGrams * qty * 10).roundToInt() / 10.0,
                 calories = (food.calories * qty).toInt(),
                 quantityLabel = label,
                 mealType = mealType.name
@@ -224,7 +229,7 @@ class FoodRepository(
                     id = "barcode-$code",
                     name = name,
                     serving = servingText.ifBlank { "100g" },
-                    proteinGrams = (protein100 * factor * 10).toInt() / 10.0,
+                    proteinGrams = (protein100 * factor * 10).roundToInt() / 10.0,
                     calories = (kcal100 * factor).toInt(),
                     category = FoodCategory.OTHER,
                     tags = listOf("barcode", "packaged")

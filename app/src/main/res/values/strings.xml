@@ -94,6 +94,7 @@
     <string name="reminder_dinner">Dinner</string>
     <string name="step_goal_title">Daily step goal</string>
     <string name="protein_goal_title">Daily protein goal (g)</string>
+    <string name="calorie_goal_title">Daily calorie goal (kcal)</string>
     <string name="avatar_title">Avatar</string>
     <string name="change_avatar">Change avatar</string>
     <string name="app_version">FIT2X v1.0.0 · native build</string>

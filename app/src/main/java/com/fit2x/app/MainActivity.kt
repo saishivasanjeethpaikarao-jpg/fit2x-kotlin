@@ -1,6 +1,5 @@
 package com.fit2x.app
 
-import android.app.Activity
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -16,6 +15,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -85,10 +85,12 @@ class MainActivity : ComponentActivity() {
             val launcher = this@MainActivity.signInLauncher
 
             // Theme follows the persisted profile; falls back to Electric.
-            val profile by graph.database.userProfileDao()
-                .observeProfile()
-                .map { it?.themeId ?: Fit2xTheme.Electric.id }
-                .collectAsState(initial = Fit2xTheme.Electric.id)
+            // Remember the flow so recompositions don't restart Room collection.
+            val profile by remember {
+                graph.database.userProfileDao()
+                    .observeProfile()
+                    .map { it?.themeId ?: Fit2xTheme.Electric.id }
+            }.collectAsState(initial = Fit2xTheme.Electric.id)
             val theme = Fit2xTheme.fromId(profile)
 
             Fit2xTheme(theme = theme) {
@@ -166,7 +168,6 @@ fun Fit2xApp(
     signInLauncher: androidx.activity.result.ActivityResultLauncher<android.content.Intent>
 ) {
     val context = LocalContext.current
-    val activity = context as Activity
     val graph = context.appGraph()
     val navController = rememberNavController()
 
@@ -220,10 +221,7 @@ fun Fit2xApp(
                 DietScreen(dietViewModel = dietViewModel)
             }
             composable(Screen.Stats.route) {
-                StatsScreen(
-                    healthViewModel = healthViewModel,
-                    workoutViewModel = workoutViewModel
-                )
+                StatsScreen()
             }
             composable(Screen.Settings.route) {
                 SettingsScreen(

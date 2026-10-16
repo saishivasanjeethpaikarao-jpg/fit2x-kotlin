@@ -40,6 +40,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -65,8 +66,6 @@ import java.time.LocalDate
 import java.time.format.TextStyle
 import java.util.Locale
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
@@ -83,6 +82,8 @@ fun StepsScreen(
 ) {
     val context = LocalContext.current
     val scheme = MaterialTheme.colorScheme
+    // Structured scope for one-shot writes (step-goal stepper).
+    val scope = rememberCoroutineScope()
 
     val todaySteps by healthViewModel.todaySteps.collectAsState()
     val weeklySteps by healthViewModel.weeklySteps.collectAsState()
@@ -91,10 +92,12 @@ fun StepsScreen(
     val hcInstalled by healthViewModel.healthConnectInstalled.collectAsState()
 
     // Step goal lives on the profile so Today + Steps stay consistent.
-    val stepGoal by context.appGraph().database.userProfileDao()
-        .observeProfile()
-        .map { it?.stepGoal ?: 10_000 }
-        .collectAsState(initial = 10_000)
+    // Remember the flow so recompositions don't restart Room collection.
+    val stepGoal by remember {
+        context.appGraph().database.userProfileDao()
+            .observeProfile()
+            .map { it?.stepGoal ?: 10_000 }
+    }.collectAsState(initial = 10_000)
 
     var showManualDialog by remember { mutableStateOf(false) }
 
@@ -238,7 +241,7 @@ fun StepsScreen(
                     color = scheme.onSurface
                 )
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = { updateStepGoal(context, stepGoal - 1_000) }) {
+                    IconButton(onClick = { updateStepGoal(scope, context, stepGoal - 1_000) }) {
                         Icon(Icons.Filled.Remove, contentDescription = null, tint = scheme.primary)
                     }
                     Text(
@@ -248,7 +251,7 @@ fun StepsScreen(
                         modifier = Modifier.width(90.dp),
                         textAlign = TextAlign.Center
                     )
-                    IconButton(onClick = { updateStepGoal(context, stepGoal + 1_000) }) {
+                    IconButton(onClick = { updateStepGoal(scope, context, stepGoal + 1_000) }) {
                         Icon(Icons.Filled.Add, contentDescription = null, tint = scheme.primary)
                     }
                 }
@@ -304,16 +307,23 @@ fun StepsScreen(
     }
 }
 
-/** Persists the step goal on the profile (Today + Steps read the same value). */
-private fun updateStepGoal(context: android.content.Context, goal: Int) {
+/**
+ * Persists the step goal on the profile (Today + Steps read the same value).
+ * Single atomic UPDATE — no read-modify-write, so rapid stepper taps can't
+ * lose increments. Launched in the composable's structured scope.
+ */
+private fun updateStepGoal(
+    scope: CoroutineScope,
+    context: android.content.Context,
+    goal: Int
+) {
     val clamped = goal.coerceIn(1_000, 50_000)
     val dao = context.appGraph().database.userProfileDao()
-    CoroutineScope(Dispatchers.IO).launch {
+    scope.launch {
         try {
-            val row = dao.observeProfile().firstOrNull()
-            if (row != null) dao.upsert(row.copy(stepGoal = clamped))
-            else dao.upsert(com.fit2x.app.data.local.UserProfile(stepGoal = clamped))
+            dao.updateStepGoal(clamped)
         } catch (_: Exception) {
+            // Best-effort; the UI already reflects the tapped value.
         }
     }
 }

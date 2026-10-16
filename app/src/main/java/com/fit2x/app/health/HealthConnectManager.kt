@@ -115,15 +115,21 @@ object HealthConnectManager {
 
     /**
      * Last [days] days of steps, most-recent last.
-     * Missing days (no permission / no data) are null.
+     * Days with no data are 0. Returns all-null when permission is missing —
+     * the permission IPC happens once, not once per day.
      */
     suspend fun getWeeklySteps(
         client: HealthConnectClient,
         days: Int = 7
     ): List<Long?> {
-        val today = LocalDate.now(ZoneId.systemDefault())
+        if (!hasPermissions(client)) return List(days) { null }
+        val zone = ZoneId.systemDefault()
+        val today = LocalDate.now(zone)
         return (days - 1 downTo 0).map { offset ->
-            getStepsForDate(client, today.minusDays(offset.toLong()))
+            val date = today.minusDays(offset.toLong())
+            val start = date.atStartOfDay(zone)
+            val end = date.plusDays(1).atStartOfDay(zone).minusNanos(1)
+            aggregateSteps(client, start, end)
         }
     }
 

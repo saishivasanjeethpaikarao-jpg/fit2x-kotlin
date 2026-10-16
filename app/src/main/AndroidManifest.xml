@@ -50,7 +50,7 @@
             android:stateNotNeeded="true"
             android:theme="@style/Theme.FIT2X" />
 
-        <!-- Re-schedule reminders after device reboot -->
+        <!-- Re-register reminders after device reboot (exact alarms don't survive it) -->
         <receiver
             android:name=".notifications.BootReceiver"
             android:exported="false">
@@ -58,6 +58,11 @@
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
             </intent-filter>
         </receiver>
+
+        <!-- Fires exact reminder alarms; re-arms the next day after each firing -->
+        <receiver
+            android:name=".notifications.AlarmReceiver"
+            android:exported="false" />
 
     </application>
 </manifest>

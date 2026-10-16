@@ -147,13 +147,6 @@ class WorkoutRepository(
         }
     }
 
-    fun observeCompletedExercises(sessionId: Long): Flow<Set<String>> =
-        // DB updates (via persistProgress) drive re-emission; the in-memory set
-        // is the live truth while the session is active.
-        sessionDao.observeSession(sessionId).map {
-            progressMutex.withLock { sessionProgress[sessionId] }?.toSet() ?: emptySet()
-        }
-
     /** Marks the session finished; call [setSessionDuration] first if timed. */
     suspend fun completeWorkout(sessionId: Long) {
         progressMutex.withLock { sessionProgress.remove(sessionId) }
