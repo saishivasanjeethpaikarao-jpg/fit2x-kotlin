@@ -8,6 +8,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.unit.dp
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -65,6 +66,51 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // DIAGNOSTIC BUILD ONLY: if a previous launch crashed, show the saved
+        // report on screen instead of dying silently.
+        val crashPrefs = getSharedPreferences(
+            Fit2xApplication.CRASH_PREFS, MODE_PRIVATE
+        )
+        val lastCrash = crashPrefs.getString(Fit2xApplication.KEY_LAST_CRASH, null)
+        if (lastCrash != null) {
+            setContent {
+                CrashReportScreen(
+                    report = lastCrash,
+                    onClear = {
+                        crashPrefs.edit()
+                            .remove(Fit2xApplication.KEY_LAST_CRASH).apply()
+                        recreate()
+                    }
+                )
+            }
+            return
+        }
+
+        try {
+            onCreateInner(savedInstanceState)
+        } catch (t: Throwable) {
+            crashPrefs.edit().putString(
+                Fit2xApplication.KEY_LAST_CRASH,
+                "${t::class.java.name}: ${t.message}\n" +
+                    t.stackTraceToString().take(3500)
+            ).apply()
+            setContent {
+                CrashReportScreen(
+                    report = crashPrefs.getString(
+                        Fit2xApplication.KEY_LAST_CRASH, ""
+                    ) ?: "",
+                    onClear = {
+                        crashPrefs.edit()
+                            .remove(Fit2xApplication.KEY_LAST_CRASH).apply()
+                        recreate()
+                    }
+                )
+            }
+        }
+    }
+
+    private fun onCreateInner(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
 
         // Make the launcher accessible to composables via the property.
@@ -157,6 +203,50 @@ private fun SplashScreen() {
         contentAlignment = Alignment.Center
     ) {
         CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+    }
+}
+
+/**
+ * DIAGNOSTIC BUILD ONLY: shows the captured launch crash so it can be
+ * screenshotted and fixed — instead of the app dying silently.
+ */
+@Composable
+private fun CrashReportScreen(report: String, onClear: () -> Unit) {
+    val scroll = androidx.compose.foundation.rememberScrollState()
+    androidx.compose.foundation.layout.Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(androidx.compose.ui.graphics.Color(0xFF1A1A1A))
+            .padding(16.dp)
+    ) {
+        androidx.compose.material3.Text(
+            text = "FIT2X crashed on launch. Screenshot this:",
+            color = androidx.compose.ui.graphics.Color(0xFFFF6B6B),
+            style = MaterialTheme.typography.titleMedium
+        )
+        androidx.compose.foundation.layout.Spacer(
+            modifier = Modifier.padding(8.dp)
+        )
+        androidx.compose.foundation.layout.Box(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxSize()
+                .background(androidx.compose.ui.graphics.Color(0xFF0D0D0D))
+                .padding(12.dp)
+        ) {
+            androidx.compose.material3.Text(
+                text = report,
+                color = androidx.compose.ui.graphics.Color(0xFF00FF88),
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.verticalScroll(scroll)
+            )
+        }
+        androidx.compose.foundation.layout.Spacer(
+            modifier = Modifier.padding(8.dp)
+        )
+        androidx.compose.material3.Button(onClick = onClear) {
+            androidx.compose.material3.Text("Clear & retry launch")
+        }
     }
 }
 

@@ -24,7 +24,34 @@ class Fit2xApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        installCrashCatcher()
         appGraph = AppGraph(this)
+    }
+
+    /**
+     * DIAGNOSTIC BUILD ONLY: captures any uncaught exception (including ones
+     * that kill the app during launch) into SharedPreferences. MainActivity
+     * shows the saved report on the next launch instead of dying silently.
+     */
+    private fun installCrashCatcher() {
+        val previous = Thread.getDefaultUncaughtExceptionHandler()
+        Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
+            try {
+                getSharedPreferences(CRASH_PREFS, MODE_PRIVATE).edit()
+                    .putString(
+                        KEY_LAST_CRASH,
+                        "${throwable::class.java.name}: ${throwable.message}\n" +
+                            throwable.stackTraceToString().take(3500)
+                    )
+                    .apply()
+            } catch (_: Exception) { /* nothing left to do */ }
+            previous?.uncaughtException(thread, throwable)
+        }
+    }
+
+    companion object {
+        const val CRASH_PREFS = "fit2x_crash"
+        const val KEY_LAST_CRASH = "last_crash"
     }
 }
 
