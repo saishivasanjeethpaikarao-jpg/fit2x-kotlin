@@ -10,6 +10,8 @@ import androidx.room.Query
 import androidx.room.RoomDatabase
 import androidx.room.Update
 import androidx.room.Upsert
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import kotlinx.coroutines.flow.Flow
 
 // ---------------------------------------------------------------------------
@@ -150,9 +152,6 @@ interface WorkoutSessionDao {
     @Update
     suspend fun update(session: WorkoutSession)
 }
-
-import androidx.room.migration.Migration
-import androidx.sqlite.db.SupportSQLiteDatabase
 
 // ---------------------------------------------------------------------------
 // Database
