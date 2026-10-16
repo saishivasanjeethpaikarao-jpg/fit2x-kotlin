@@ -1,6 +1,7 @@
 package com.fit2x.app.data.local
 
 import androidx.room.Dao
+import androidx.room.ColumnInfo
 import androidx.room.Database
 import androidx.room.Delete
 import androidx.room.Entity
@@ -30,6 +31,7 @@ data class UserProfile(
     val stepGoal: Int = 10_000,
     val proteinGoalGrams: Int = 70,
     /** Daily calorie target (was hardcoded 2200 before v2). */
+    @ColumnInfo(defaultValue = "2200")
     val calorieGoal: Int = 2_200,
     val avatarUri: String? = null,
     val streakDays: Int = 0,
