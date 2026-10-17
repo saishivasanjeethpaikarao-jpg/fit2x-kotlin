@@ -67,6 +67,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        CrashCatcherProvider.crumb(this, "activity:onCreate-start")
 
         // DIAGNOSTIC BUILD ONLY: if a previous launch crashed, show the saved
         // report on screen instead of dying silently.
@@ -213,6 +214,10 @@ private fun SplashScreen() {
  */
 @Composable
 private fun CrashReportScreen(report: String, onClear: () -> Unit) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val breadcrumbs = androidx.compose.runtime.remember {
+        CrashCatcherProvider.readBreadcrumbs(context)
+    }
     val scroll = androidx.compose.foundation.rememberScrollState()
     androidx.compose.foundation.layout.Column(
         modifier = Modifier
@@ -224,6 +229,19 @@ private fun CrashReportScreen(report: String, onClear: () -> Unit) {
             text = "FIT2X crashed on launch. Screenshot this:",
             color = androidx.compose.ui.graphics.Color(0xFFFF6B6B),
             style = MaterialTheme.typography.titleMedium
+        )
+        androidx.compose.foundation.layout.Spacer(
+            modifier = Modifier.padding(8.dp)
+        )
+        androidx.compose.material3.Text(
+            text = "STARTUP TRAIL:",
+            color = androidx.compose.ui.graphics.Color(0xFFFFD54F),
+            style = MaterialTheme.typography.labelLarge
+        )
+        androidx.compose.material3.Text(
+            text = breadcrumbs,
+            color = androidx.compose.ui.graphics.Color(0xFFFFD54F),
+            style = MaterialTheme.typography.bodySmall
         )
         androidx.compose.foundation.layout.Spacer(
             modifier = Modifier.padding(8.dp)

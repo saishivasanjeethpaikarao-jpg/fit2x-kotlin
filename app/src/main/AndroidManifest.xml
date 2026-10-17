@@ -32,6 +32,15 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.FIT2X">
 
+        <!-- DIAGNOSTIC BUILD ONLY: installs the crash catcher before
+             Firebase/WorkManager providers initialise (they run before
+             Application.onCreate). initOrder 100 = first. -->
+        <provider
+            android:name=".CrashCatcherProvider"
+            android:authorities="${applicationId}.crashcatcher"
+            android:exported="false"
+            android:initOrder="100" />
+
         <activity
             android:name=".MainActivity"
             android:exported="true"

@@ -24,8 +24,11 @@ class Fit2xApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        CrashCatcherProvider.crumb(this, "app:onCreate-start")
         installCrashCatcher()
+        CrashCatcherProvider.crumb(this, "app:catcher-installed")
         appGraph = AppGraph(this)
+        CrashCatcherProvider.crumb(this, "app:graph-created")
     }
 
     /**
