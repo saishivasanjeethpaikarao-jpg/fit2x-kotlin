@@ -2,6 +2,7 @@ package com.fit2x.app
 
 import android.app.Application
 import androidx.room.Room
+import androidx.work.Configuration
 import com.fit2x.app.data.auth.AuthRepository
 import com.fit2x.app.data.local.Fit2xDatabase
 import com.fit2x.app.data.local.MIGRATION_1_2
@@ -16,11 +17,17 @@ import com.google.firebase.firestore.FirebaseFirestore
  * so there is exactly ONE database file ("fit2x-db") for the whole app.
  *
  * Registered in AndroidManifest as android:name=".Fit2xApplication".
+ *
+ * Implements [Configuration.Provider] so WorkManager initialises on demand
+ * (its androidx.startup auto-init is disabled in the manifest).
  */
-class Fit2xApplication : Application() {
+class Fit2xApplication : Application(), Configuration.Provider {
 
     lateinit var appGraph: AppGraph
         private set
+
+    override val workManagerConfiguration: Configuration
+        get() = Configuration.Builder().build()
 
     override fun onCreate() {
         super.onCreate()

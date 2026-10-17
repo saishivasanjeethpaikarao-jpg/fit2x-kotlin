@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <!-- Step counting -->
     <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
@@ -31,6 +32,21 @@
         android:label="@string/app_name"
         android:supportsRtl="true"
         android:theme="@style/Theme.FIT2X">
+
+        <!-- Disable WorkManager auto-init at startup (it initialises via
+             androidx.startup before Application.onCreate). The app only uses
+             WorkManager as a fallback for reminders, so on-demand init is safe.
+             Fit2xApplication implements Configuration.Provider for lazy init. -->
+        <provider
+            android:name="androidx.startup.InitializationProvider"
+            android:authorities="${applicationId}.androidx-startup"
+            android:exported="false"
+            tools:node="merge">
+            <meta-data
+                android:name="androidx.work.WorkManagerInitializer"
+                android:value="androidx.startup"
+                tools:node="remove" />
+        </provider>
 
         <!-- DIAGNOSTIC BUILD ONLY: installs the crash catcher before
              Firebase/WorkManager providers initialise (they run before
