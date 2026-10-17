@@ -36,6 +36,14 @@ class AuthViewModel(private val repository: AuthRepository) : ViewModel() {
 
     init {
         viewModelScope.launch {
+            // Safety net: if Firebase Auth never responds (listener never fires),
+            // don't hang on the splash forever — fall through to the login screen.
+            launch {
+                kotlinx.coroutines.delay(8000)
+                if (_authState.value is AuthState.Checking) {
+                    _authState.value = AuthState.SignedOut
+                }
+            }
             repository.observeAuthState().collect { user ->
                 _authState.value = when {
                     user != null -> AuthState.SignedIn(user)
