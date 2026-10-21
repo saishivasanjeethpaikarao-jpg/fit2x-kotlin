@@ -100,7 +100,15 @@ sealed class Fit2xTheme(
     )
 
     companion object {
-        val all: List<Fit2xTheme> = listOf(Electric, Ember, Noir, Earth)
+        // LAZY on purpose — do NOT build this list eagerly. When the first
+        // access to the theme family is a subclass object (MainActivity reads
+        // Fit2xTheme.Electric.id as the collectAsState initial value), the
+        // superclass <clinit> creates this companion mid-initialisation and
+        // Electric.INSTANCE is still null, so an eager list permanently
+        // captures a null element. fromId() then throws NPE at the
+        // firstOrNull { it.id == id } line on EVERY launch (the launch
+        // crash diagnosed 2026-10-21 from the BlueStacks crash screen).
+        val all: List<Fit2xTheme> by lazy { listOf(Electric, Ember, Noir, Earth) }
 
         /** Falls back to Electric (the default) for unknown ids. */
         fun fromId(id: String): Fit2xTheme =
